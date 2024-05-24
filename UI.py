@@ -45,13 +45,13 @@ class Ui_MainWindow(object):
                 self.verticalLayout.setContentsMargins(0, 0, 0, 0)
                
  ###################################################################################################### 
- ################################################################################################
- ################################################################################################
- ################################################################################################
- ################################################################################################
- ################################################################################################
- ################################################################################################
- ################################################################################################             
+ ###################################################################################################### 
+ ###################################################################################################### 
+ ###################################################################################################### 
+ ###################################################################################################### 
+ ###################################################################################################### 
+ ###################################################################################################### 
+ ######################################################################################################       
                 self.high_speed = QPushButton("Increase Speed")
                 self.high_speed.clicked.connect(self.high)
                 self.high_speed.setStyleSheet("background-color: black; color: white;")
@@ -79,6 +79,14 @@ class Ui_MainWindow(object):
                 self.stop_button.setMinimumSize(75, 25)  # Adjust the values as needed
                 self.stop_button.setMaximumSize(125, 50)
                 self.stop_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+
+                self.open_new_window_button = QPushButton("path")
+                self.open_new_window_button.clicked.connect(self.open_new_window)
+                self.open_new_window_button.setStyleSheet("background-color: black; color: white;")
+                self.open_new_window_button.setMinimumSize(75, 25)  # Adjust the values as needed
+                self.open_new_window_button.setMaximumSize(125, 50)
+                self.open_new_window_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
                 self.up_button = QPushButton("up")
                 self.up_button.clicked.connect(self.moveup)
@@ -137,8 +145,6 @@ class Ui_MainWindow(object):
                 self.page_home = QWidget()
 
                 self.verticalLayout_5 = QVBoxLayout(self.page_home)
-                self.verticalLayout_5.setSpacing(0)
-                self.verticalLayout_5.setContentsMargins(0, 0, 0, 0)
 
                 self.frame_content_home = QFrame(self.page_home)
                 self.frame_content_home.setObjectName(u"frame_content_home")
@@ -309,6 +315,9 @@ class Ui_MainWindow(object):
                 self.horizontalLayout_P.addWidget(self.empty_button)
                 self.horizontalLayout_P.addWidget(self.right_button)
 
+                self.verticalLayout_p10k = QHBoxLayout()
+                self.verticalLayout_p10k.addWidget(self.open_new_window_button)
+
                 self.horizontalLayout_P1 = QHBoxLayout()
                 self.horizontalLayout_P1.setAlignment(Qt.AlignCenter)
                 self.horizontalLayout_P1.addWidget(self.up_button)
@@ -341,7 +350,8 @@ class Ui_MainWindow(object):
                 self.verticalLayout_10.addLayout(self.horizontalLayout_P)
                 self.verticalLayout_10.addLayout(self.horizontalLayout_P2)
                 self.verticalLayout_10.addLayout(self.horizontalLayout_P4)
-               
+                self.verticalLayout_10.addLayout(self.verticalLayout_p10k)
+
                 self.horizontalLayout_p10 = QHBoxLayout(self.frame_texts)
                 self.horizontalLayout_p10.setAlignment(Qt.AlignHCenter)
                 self.horizontalLayout_p10.addLayout(self.verticalLayout_p3)
@@ -364,10 +374,11 @@ class Ui_MainWindow(object):
 
                 self.stackedWidget.setCurrentIndex(0)
 
-
+                
                 QMetaObject.connectSlotsByName(MainWindow)
-        # setupUi
-
+        def open_new_window(self):
+                self.new_window = NewWindow()
+                self.new_window.show()
         ############################################################################################
         def readData(self):
                 data = self.serial.readAll()
@@ -396,31 +407,31 @@ class Ui_MainWindow(object):
                         self.serial.setFlowControl(QSerialPort.NoFlowControl)
 ############################################################################################
 
-        def moveup(self,MainWindow):
+        def moveup(self):
                 self.serial.write("z".encode())
 
-        def movedown(self,MainWindow):
+        def movedown(self):
                 self.serial.write("s".encode())
 
-        def moveright(self,MainWindow):
+        def moveright(self):
                 self.serial.write("d".encode())
 
-        def moveleft(self,MainWindow):
+        def moveleft(self):
                 self.serial.write("q".encode())
 
-        def start(self,MainWindow):
+        def start(self):
                 self.serial.write("m".encode())
 
-        def stop(self,MainWindow):
+        def stop(self):
                 self.serial.write("o".encode())
 
-        def low(self,MainWindow):
+        def low(self):
                 self.serial.write("l".encode())
 
-        def high(self,MainWindow):
+        def high(self):
                 self.serial.write("h".encode())
 
-        def auto(self,MainWindow):
+        def auto(self):
                 self.serial.write("a".encode())
                 
         def retranslateUi(self, MainWindow):
@@ -466,6 +477,11 @@ class Ui_MainWindow(object):
                 self.auto_mode = QPushButton("Auto Mode")
                 self.auto_mode.clicked.connect(self.auto)
                 
+class NewWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle('New Window')
+        self.setGeometry(100, 100, 400, 200)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -474,8 +490,9 @@ class MainWindow(QMainWindow):
         self.ui.setupUi(self)
 
         self.show()
+
 if __name__ == "__main__":
-        app = QApplication(sys.argv)
-        window = MainWindow()
-        window.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
-        sys.exit(app.exec_())
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
+    sys.exit(app.exec_())
