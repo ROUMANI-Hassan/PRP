@@ -4,50 +4,32 @@ from PyQt5.QtCore import Qt, QTimer
 import math
 from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
 
-nameport = 'com8'
+nameport = 'com2'
 baudrate = 115200
 serial = None
-last_command = None
-last_command_1 = None
-add = 0
-last_angle = 0
-commands = []  # List to store commands
-timedelay = 0
+
+commands = []  # Array to store commands
+points = []  # List to store points
+
+distance_tolerance = 50  # Tolerance distance in pixels
+scaling_factor = 2  # Factor to increase the number of 'a' commands
+
 def moveup():
     commands.append("z")
     print("Command: move up")
 
-def movedown():
-    commands.append("s")
-    print("Command: move down")
+def right_turn():
+    commands.append("e")
+    print("Command: right turn")
 
-def moveright():
-    commands.append("d")
-    print("Command: move right")
+def left_turn():
+    commands.append("t")
+    print("Command: left turn")
 
-def moveleft():
-    commands.append("q")
-    print("Command: move left")
-
-def start():
-    commands.append("m")
-    print("Command: start")
-
-def stop():
-    commands.append("o")
-    print("Command: stop")
-
-def low():
-    commands.append("l")
-    print("Command: low")
-
-def high():
-    commands.append("h")
-    print("Command: high")
-
-def auto():
-    commands.append("a")
-    print("Command: auto")
+def move_forward(steps):
+    for _ in range(steps):
+        commands.append("a")
+    print(f"Command: move forward {steps} steps")
 
 def openSerialPort():
     global serial
@@ -64,80 +46,76 @@ def openSerialPort():
         serial.setDataBits(QSerialPort.Data8)
         serial.setFlowControl(QSerialPort.NoFlowControl)
 
-def mouseMoveEvent(e):
-    global last_x, last_y, path
-    if last_x is None:  # First event.
-        last_x = e.x()
-        last_y = e.y()
-        return  # Ignore the first time.
-
-    # Append the new coordinates to the path
-    path.append((e.x(), e.y()))
-
+def mousePressEvent(e):
+    global points
+    x, y = e.x(), e.y()
+    points.append((x, y))
+    
+    # Draw the point
     painter = QtGui.QPainter(label.pixmap())
-    painter.drawLine(last_x, last_y, e.x(), e.y())
+    painter.setPen(QtCore.Qt.red)
+    painter.drawEllipse(x - 2, y - 2, 4, 4)
+    
+    # Draw lines between points
+    if len(points) > 1:
+        painter.setPen(QtCore.Qt.blue)
+        painter.drawLine(points[-2][0], points[-2][1], points[-1][0], points[-1][1])
+        
     painter.end()
     label.update()
-
-    # Update the origin for next time.
-    last_x = e.x()
-    last_y = e.y()
     
-def angle_between_points(p1, p2, p3):
-    x1, y1 = p1
-    x2, y2 = p2
-    x3, y3 = p3
-    v1 = (x2 - x1, y2 - y1)
-    v2 = (x3 - x2, y3 - y2)
-    dot_product = v1[0] * v2[0] + v1[1] * v2[1]
-    magnitude_v1 = math.sqrt(v1[0] ** 2 + v1[1] ** 2)
-    magnitude_v2 = math.sqrt(v2[0] ** 2 + v2[1] ** 2)
-    cos_theta = dot_product / (magnitude_v1 * magnitude_v2)
-    return math.degrees(math.acos(cos_theta))
-def mouseReleaseEvent(e):
-    global path, commands
-    commands = []
-    commands.append("p")  # Command to start painting
-    print("Command: p")
+    print(f"Point added: ({x}, {y})")
 
-    # Print the path coordinates
-    print("Path coordinates:", path)
+def calculate_angle(p1, p2, p3):
+    """Calculate the angle between the line segments p1p2 and p2p3"""
+    v1 = (p2[0] - p1[0], p2[1] - p1[1])
+    v2 = (p3[0] - p2[0], p3[1] - p2[1])
+    
+    angle1 = math.atan2(v1[1], v1[0])
+    angle2 = math.atan2(v2[1], v2[0])
+    
+    angle_degrees = math.degrees(angle2 - angle1)
+    if angle_degrees < 0:
+        angle_degrees += 360
+    
+    return angle_degrees
 
-    for i in range(0, len(path) - 4, 5):  # Loop through the path with a step of 5
-        avg_angle_sum = 0
+def calculate_distance(p1, p2):
+    """Calculate the distance between two points"""
+    dx = p2[0] - p1[0]
+    dy = p2[1] - p1[1]
+    distance = math.sqrt(dx**2 + dy**2)
+    return distance
 
-        for j in range(i, i + 4):  # Calculate the sum of angles for the current segment
-            x = path[j][0]
-            y = path[j][1]
-            x_2 = path[j + 1][0]
-            y_2 = path[j + 1][1]
-            dx = x_2 - x
-            dy = y_2 - y
-            angle_radians = math.atan2(dy, dx)
-            angle_degrees = math.degrees(angle_radians)
-            avg_angle_sum += angle_degrees
+def generateCommands():
+    global points, commands
+    commands = []  # Clear previous commands
 
-        average_angle = avg_angle_sum / 5  # Calculate the average angle for the segment
-        print("Average angle:", average_angle)
+    if len(points) < 2:
+        print("Not enough points to generate commands.")
+        return
 
-        # Determine the appropriate commands based on the average angle
-        if abs(average_angle) < 30:  # Straight line tolerance
-            commands.extend("a")  # Move forward (send "a")
-        else:
-            if average_angle >= 0:  # Right turn
-                commands.append("t")  # Rotate right
-            else:  # Left turn
-                commands.append("e")  # Rotate left
+    for i in range(len(points) - 1):
+        distance = calculate_distance(points[i], points[i + 1])
+        steps = int((distance / distance_tolerance) * scaling_factor)  # Apply scaling factor
+        move_forward(steps)
+        
+        if i < len(points) - 2:
+            angle_degrees = calculate_angle(points[i], points[i+1], points[i+2])
+            print(f"Angle between points {i}, {i+1}, {i+2}: {angle_degrees}")
+            turns = int(round(angle_degrees / 30))  # Correct rounding
+            
+            if angle_degrees <= 180:
+                for _ in range(turns):
+                    right_turn()
+            else:
+                turns = int(round((360 - angle_degrees) / 30))  # Correct angle for left turn
+                for _ in range(turns):
+                    left_turn()
+    
+    sendCommands()
 
-    commands.append("l")  # Command to stop painting
-    print("All commands:", commands)
-    send_commands()
-
-
-
-
-
-def send_commands():
+def sendCommands():
     global commands
     if commands:
         command = commands.pop(0)
@@ -147,22 +125,30 @@ def send_commands():
             print(f"Sent command: {command}")
         else:
             print(f"Serial port is not open or not available")
-
-        QTimer.singleShot(1000, send_commands)  # Call send_commands() after 100 ms
+        if commands:  # Send next command after a delay
+            QTimer.singleShot(400, sendCommands)
+    else:
+        print("All commands sent.")
 
 app = QtWidgets.QApplication(sys.argv)
+
+window = QtWidgets.QWidget()
+layout = QtWidgets.QVBoxLayout(window)
 
 label = QtWidgets.QLabel()
 canvas = QtGui.QPixmap(400, 300)
 canvas.fill(Qt.white)
 label.setPixmap(canvas)
-last_x, last_y = None, None
-path = []
+label.setFixedSize(400, 300)
+layout.addWidget(label)
+
+button = QtWidgets.QPushButton("Go")
+layout.addWidget(button)
+button.clicked.connect(generateCommands)
 
 openSerialPort()
 
-label.mouseMoveEvent = mouseMoveEvent
-label.mouseReleaseEvent = mouseReleaseEvent
+label.mousePressEvent = mousePressEvent
 
-label.show()
+window.show()
 sys.exit(app.exec_())
