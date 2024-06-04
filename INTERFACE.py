@@ -23,7 +23,7 @@ from datetime import datetime, timedelta
 import matplotlib.dates as mdates
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-nameport = 'com8'
+nameport = '/dev/ttyUSB0'
 baudrate = 115200
 
 class MainWindow(QMainWindow):
@@ -259,20 +259,23 @@ class MainWindow(QMainWindow):
 
         def open_new_window(self):
                 self.serial.close()
-                subprocess.run(['python','importsys2.py'])
+                subprocess.run(['python','path.py'])
                        
         ############################################################################################
         def update_data(self):
-                data = self.serial.readAll()
-                print("hi")
+                data = str(self.serial.readAll())
                 print(data)
-                data_list = [math.log2(int(x)) for x in data.split(',')]
+                data =data[2::]
+                data = data[:-1]
+                print(data)
+                data_list = [int(x) for x in data.split(' ')]
+                print(data_list)
                 self.plot_data(data_list)
                 
-                
+                 
         def plot_data(self, data):
                 current_time = datetime.now()
-                self.data_sets.append((current_time, data))
+                self.data_sets.append((current_time, data[0],data[1]))
                 self.update_plot()
 
         def update_plot(self):
@@ -280,18 +283,19 @@ class MainWindow(QMainWindow):
         
                 x_values = []
                 y_values = []
-                
+                y1_values = []
                 if self.data_sets:
-                        for timestamp, data in self.data_sets:
+                        for timestamp, data ,data1 in self.data_sets:
                                 x_values.append(timestamp)
-                                y_values.extend(data)
+                                y_values.append(((data)))
+                                y1_values.append(((data1)))
+                                print(data)
+                        print(len(x_values))
+                        print(len(y_values))
                         self.axes.plot(x_values, y_values, marker='o')
+                        self.axes.plot(x_values, y1_values, marker='x')
                         self.axes.set_ylabel('Y Value')
                         self.axes.set_title('Input Plot')
-                        y_ticks = np.arange(0, 9, 1)
-                        self.axes.set_yticks(y_ticks)
-                        y_tick_labels = [str(int(2**y)) for y in y_ticks]
-                        self.axes.set_yticklabels(y_tick_labels)
                         self.axes.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
                         current_time = datetime.now()
                         min_time = current_time - timedelta(seconds=10)
@@ -301,6 +305,7 @@ class MainWindow(QMainWindow):
                 else:
                         self.axes.plot(0, 0, marker='o')
                 self.canvas.draw()
+                
 
 ############################################################################################
         def moveup(self):
@@ -330,7 +335,7 @@ class MainWindow(QMainWindow):
                 QTimer.singleShot(200, lambda:self.serial.write(text_to_send[1].encode())) 
                 QTimer.singleShot(300,lambda:self.serial.write(text_to_send[2].encode())) 
         def auto(self):
-                self.serial.write("a".encode())
+                self.serial.write("j".encode())
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
