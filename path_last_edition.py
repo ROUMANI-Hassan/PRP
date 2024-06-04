@@ -8,11 +8,11 @@ nameport = 'com2'
 baudrate = 115200
 serial = None
 
-commands = []  # Array to store commands
-points = []  # List to store points
+commands = []
+points = []
 
-distance_tolerance = 50  # Tolerance distance in pixels
-scaling_factor = 2  # Factor to increase the number of 'a' commands
+distance_tolerance = 50
+scaling_factor = 2
 
 def moveup():
     commands.append("z")
@@ -51,12 +51,10 @@ def mousePressEvent(e):
     x, y = e.x(), e.y()
     points.append((x, y))
     
-    # Draw the point
     painter = QtGui.QPainter(label.pixmap())
     painter.setPen(QtCore.Qt.red)
     painter.drawEllipse(x - 2, y - 2, 4, 4)
     
-    # Draw lines between points
     if len(points) > 1:
         painter.setPen(QtCore.Qt.blue)
         painter.drawLine(points[-2][0], points[-2][1], points[-1][0], points[-1][1])
@@ -67,7 +65,6 @@ def mousePressEvent(e):
     print(f"Point added: ({x}, {y})")
 
 def calculate_angle(p1, p2, p3):
-    """Calculate the angle between the line segments p1p2 and p2p3"""
     v1 = (p2[0] - p1[0], p2[1] - p1[1])
     v2 = (p3[0] - p2[0], p3[1] - p2[1])
     
@@ -81,15 +78,14 @@ def calculate_angle(p1, p2, p3):
     return angle_degrees
 
 def calculate_distance(p1, p2):
-    """Calculate the distance between two points"""
     dx = p2[0] - p1[0]
     dy = p2[1] - p1[1]
     distance = math.sqrt(dx**2 + dy**2)
     return distance
 
-def generateCommands():
+def generateCommands(end_command='l'):
     global points, commands
-    commands = []  # Clear previous commands
+    commands = ['p']
 
     if len(points) < 2:
         print("Not enough points to generate commands.")
@@ -97,22 +93,23 @@ def generateCommands():
 
     for i in range(len(points) - 1):
         distance = calculate_distance(points[i], points[i + 1])
-        steps = int((distance / distance_tolerance) * scaling_factor)  # Apply scaling factor
+        steps = int((distance / distance_tolerance) * scaling_factor)
         move_forward(steps)
         
         if i < len(points) - 2:
             angle_degrees = calculate_angle(points[i], points[i+1], points[i+2])
             print(f"Angle between points {i}, {i+1}, {i+2}: {angle_degrees}")
-            turns = int(round(angle_degrees / 30))  # Correct rounding
+            turns = int(round(angle_degrees / 30))
             
             if angle_degrees <= 180:
                 for _ in range(turns):
                     right_turn()
             else:
-                turns = int(round((360 - angle_degrees) / 30))  # Correct angle for left turn
+                turns = int(round((360 - angle_degrees) / 30))
                 for _ in range(turns):
                     left_turn()
     
+    commands.append(end_command)
     sendCommands()
 
 def sendCommands():
@@ -125,7 +122,7 @@ def sendCommands():
             print(f"Sent command: {command}")
         else:
             print(f"Serial port is not open or not available")
-        if commands:  # Send next command after a delay
+        if commands:
             QTimer.singleShot(400, sendCommands)
     else:
         print("All commands sent.")
@@ -142,9 +139,17 @@ label.setPixmap(canvas)
 label.setFixedSize(400, 300)
 layout.addWidget(label)
 
-button = QtWidgets.QPushButton("Go")
-layout.addWidget(button)
-button.clicked.connect(generateCommands)
+button_go = QtWidgets.QPushButton("Go (End with 'l')")
+button_go_r = QtWidgets.QPushButton("Go (End with 'r')")
+button_stop = QtWidgets.QPushButton("Stop")
+
+layout.addWidget(button_go)
+layout.addWidget(button_go_r)
+layout.addWidget(button_stop)
+
+button_go.clicked.connect(lambda: generateCommands('l'))
+button_go_r.clicked.connect(lambda: generateCommands('r'))
+button_stop.clicked.connect(lambda: generateCommands('o'))
 
 openSerialPort()
 
