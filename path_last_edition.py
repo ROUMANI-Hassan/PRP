@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt, QTimer
 import math
 from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
 
-nameport = 'com2'
+nameport = '/dev/ttyUSB0'
 baudrate = 115200
 serial = None
 
@@ -123,7 +123,7 @@ def sendCommands():
         else:
             print(f"Serial port is not open or not available")
         if commands:
-            QTimer.singleShot(400, sendCommands)
+            QTimer.singleShot(800, sendCommands)
     else:
         print("All commands sent.")
 
@@ -149,7 +149,7 @@ layout.addWidget(button_stop)
 
 button_go.clicked.connect(lambda: generateCommands('l'))
 button_go_r.clicked.connect(lambda: generateCommands('r'))
-button_stop.clicked.connect(lambda: generateCommands('o'))
+button_stop.clicked.connect(lambda: serial.write('o'.encode()))
 
 openSerialPort()
 
